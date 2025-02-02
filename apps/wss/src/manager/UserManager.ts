@@ -72,6 +72,20 @@ export class UserManager {
                 case  "CLEAR" : 
                     room?.drawEvent(socket, parsedMessage)
                     break;
+
+                case "START_GAME" : 
+                    room?.startGame(socket, parsedMessage)
+                    break;
+                case "GET_WORD":
+                    room?.secondTimerOfGame(socket, parsedMessage)
+                    
+                    break;
+                case "TIMER":
+                    // room?.secondTimerOfGame(socket)
+                    break;
+                case "ROUND_END":
+                    room?.stopSecondTimer(socket)
+                    break;
                 default:
                     console.warn("Unhandled message type:", parsedMessage.type);
                     break;

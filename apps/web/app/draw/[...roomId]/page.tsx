@@ -5,6 +5,11 @@ import axios from "axios";
 import { useParams } from "next/navigation";
 import { useRef, useState, useEffect } from "react";
 
+export function delay(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+
 export default function Whiteboard() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
@@ -14,11 +19,14 @@ export default function Whiteboard() {
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const params = useParams<{ roomId: string}>()
   const [name, setName] = useState("")
-  const [rounds, setRounds] = useState("")
-  const [timeSlot, setTimeSlot] = useState("")
-  const [difficulty, setDifficulty] = useState("")
+  const [rounds, setRounds] = useState(3)
+  const [timeSlot, setTimeSlot] = useState(30)
+  const [difficulty, setDifficulty] = useState("easy")
   const [startClick, setStartClick] = useState(false)
-  
+  const [counter, setCounter] = useState(0)
+  const [word, setWord] = useState("")
+  const [players, setPlayes] = useState<any[]>([])
+
   useEffect(() => {
     const newSocket = new WebSocket("ws://localhost:8080");
     const username = localStorage.getItem("username");
@@ -32,7 +40,7 @@ export default function Whiteboard() {
 
     
 
-    newSocket.onmessage = (event) => {
+    newSocket.onmessage = async(event) => {
       const data = JSON.parse(event.data);
 
       if (!ctxRef.current) return;
@@ -54,6 +62,58 @@ export default function Whiteboard() {
           break
         case "START_GAME" : 
           setStartClick(true)
+          console.log(data.payload)
+          break;
+        case "TIMER":
+          setCounter(timeSlot - data.time)
+          break;
+        case "SECOND_TIMER_STOPPED": 
+          console.log("Round end")
+          // setCounter(timeSlot)
+          // await delay(3000)
+          // console.log("Round Started")
+          // const options = {
+          //   method: 'GET',
+          //   url: 'https://pictionary-charades-word-generator.p.rapidapi.com/pictionary',
+          //   params: {difficulty: difficulty},
+          //   headers: {
+          //     'x-rapidapi-key': '3db60b20b3mshda7fd392c482e24p164e0fjsnc133203e3533',
+          //     'x-rapidapi-host': 'pictionary-charades-word-generator.p.rapidapi.com'
+          //   }
+          // };
+          // axios.request(options).then((res)=>{
+          //   socket?.send(JSON.stringify({
+          //     type : "GET_WORD", 
+          //     roomId : params.roomId[0], 
+          //     word : res.data.word, 
+          //     gameSettings : {
+          //       difficulty : difficulty, 
+          //       timeSlot : timeSlot,
+          //       rounds : rounds
+          //     }
+          //   }))            
+          // })
+
+          break;
+        case "GET_WORD":
+          console.log(data)
+          setWord(data.word)
+          const gameSettings = data.gameSetting
+          setDifficulty(gameSettings.diffuclty)
+          setTimeSlot(Number(gameSettings.timeSlot))
+          setRounds(Number(gameSettings.rounds))
+          socket?.send(JSON.stringify({type : "TIMER", roomId : params.roomId[0]}))
+          break;
+        case "WORD":
+          setWord(data.word)
+          console.log(data.word)
+          break;
+        case "SECOND_TIMER":
+          // console.log(data)
+          setCounter(data.time)
+          if(data.word){
+            setWord(data.word)
+          }
           break
       }
     };
@@ -83,6 +143,12 @@ export default function Whiteboard() {
     if(startClick)
     socket?.send(JSON.stringify({type : "START_GAME", roomId : params.roomId[0]}))
   },[startClick])
+
+  useEffect(()=>{
+    if(timeSlot-counter <= 0){
+      socket?.send(JSON.stringify({type : "ROUND_END", roomId : params.roomId[0]}))
+    }    
+  },[counter])
 
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!ctxRef.current) return;
@@ -179,6 +245,8 @@ export default function Whiteboard() {
         <button onClick={clearCanvas} className="ml-4 px-3 py-1 bg-red-500 text-white rounded">
           Clear
         </button>
+        
+
       </div>
       <canvas
         ref={canvasRef}
@@ -188,36 +256,64 @@ export default function Whiteboard() {
         onMouseMove={draw}
         onMouseUp={stopDrawing}
         onMouseOut={stopDrawing}
-        
+
       />
+      <div className="w-full">
+        <div style={{marginBottom : "-2rem"}} className="text-left mt-10"> Timer : {timeSlot - counter} Sec</div>
+        <div className="w-full text-2xl text-center"> Word : {word}</div>
+      </div>
     </div>
     <div className="col-span-1">
 
     </div>
     <div className=" col-span-2 mt-16">
       {/* <span>chat</span> */}
-      {/* <div className="w-full h-full">
-        <select name="Level" id="">
-          <option value="easy">easy</option>
-          <option value="medium">medium</option>
-          <option value="hard">hard</option>
-        </select>
-        <select name="Rounds" id="">
-          <option value="3">3</option>
-          <option value="4">4</option>
-          <option value="5">5</option>
-          <option value="6">6</option>
-          <option value="7">7</option>
-        </select>
-        <select name="Time to Guess" id="">
-          <option value="30">30</option>
-          <option value="50">50</option>
-          <option value="80">80</option>
-          <option value="100">100</option>
-          <option value="120">120</option>
-        </select>
-      </div> */}
-      <GameOptions
+      <div className="w-full h-full flex flex-col">
+        <div className="flex justify-between items-center m-2">
+          <span>Diffuclty :</span>
+          <select onChange={(e)=>setDifficulty(e.target.value)} name="Level" id="">
+            <option value="easy">easy</option>
+            <option value="medium">medium</option>
+            <option value="hard">hard</option>
+          </select>
+        </div>
+        <div className="flex justify-between items-center m-2">
+          <span>No. of Rounds :</span>
+          <select onChange={(e)=>setRounds(Number(e.target.value))} name="Rounds" id="">
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+            <option value="7">7</option>
+          </select>
+        </div>
+        <div className="flex justify-between items-center m-2">
+          <span>Time to guess :</span>
+          <select onChange={(e)=>setTimeSlot(Number(e.target.value))} name="TimeSlot" id="">
+            <option value="30">30</option>
+            <option value="50">50</option>
+            <option value="80">80</option>
+            <option value="100">100</option>
+            <option value="120">120</option>
+          </select>
+        </div>
+        <button onClick={()=>{
+          
+          socket?.send(JSON.stringify({
+            type : "GET_WORD", 
+            roomId : params.roomId[0],
+            gameSettings : {
+              difficulty : difficulty, 
+              timeSlot : timeSlot, 
+              rounds : rounds
+            }
+          }))
+          
+        }} className="ml-4 px-3 py-1 bg-green-500 text-white rounded">
+          Start
+        </button>
+      </div>
+      {/* <GameOptions
       timeSlot={timeSlot}
       rounds={rounds}
       difficulty={difficulty}
@@ -225,7 +321,7 @@ export default function Whiteboard() {
       setTimeSlot={setTimeSlot}
       setDifficulty={setDifficulty}
       setStartClick = {setStartClick}
-      />
+      /> */}
     </div>
     </div>
   );
