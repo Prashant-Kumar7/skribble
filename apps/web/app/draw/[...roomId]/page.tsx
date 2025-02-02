@@ -1,6 +1,7 @@
 "use client";
 
 import GameOptions from "@/components/game-options";
+import { Players } from "@/components/players";
 import axios from "axios";
 import { useParams } from "next/navigation";
 import { useRef, useState, useEffect } from "react";
@@ -69,30 +70,7 @@ export default function Whiteboard() {
           break;
         case "SECOND_TIMER_STOPPED": 
           console.log("Round end")
-          // setCounter(timeSlot)
-          // await delay(3000)
-          // console.log("Round Started")
-          // const options = {
-          //   method: 'GET',
-          //   url: 'https://pictionary-charades-word-generator.p.rapidapi.com/pictionary',
-          //   params: {difficulty: difficulty},
-          //   headers: {
-          //     'x-rapidapi-key': '3db60b20b3mshda7fd392c482e24p164e0fjsnc133203e3533',
-          //     'x-rapidapi-host': 'pictionary-charades-word-generator.p.rapidapi.com'
-          //   }
-          // };
-          // axios.request(options).then((res)=>{
-          //   socket?.send(JSON.stringify({
-          //     type : "GET_WORD", 
-          //     roomId : params.roomId[0], 
-          //     word : res.data.word, 
-          //     gameSettings : {
-          //       difficulty : difficulty, 
-          //       timeSlot : timeSlot,
-          //       rounds : rounds
-          //     }
-          //   }))            
-          // })
+          
 
           break;
         case "GET_WORD":
@@ -106,7 +84,7 @@ export default function Whiteboard() {
           break;
         case "WORD":
           setWord(data.word)
-          console.log(data.word)
+          console.log(data)
           break;
         case "SECOND_TIMER":
           // console.log(data)
@@ -115,6 +93,9 @@ export default function Whiteboard() {
             setWord(data.word)
           }
           break
+        case "PLAYERS":
+          setPlayes(data.players)
+          break;
       }
     };
 
@@ -221,12 +202,16 @@ export default function Whiteboard() {
   return (
     <div className="w-screen h-screen grid grid-cols-12">
       <div className="col-span-2 p-4">
-        <span className="text-xl">Participants</span>
+        <span className="text-xl">Players</span>
 
-        <div className="flex p-2 bg-gray-200 text-lg text-black justify-between">
-          <span>prashant</span>
-          <span>points 0</span>
-        </div>
+        {players.map((player, index)=>{
+          return (
+            <Players
+            key={index}
+            player={player}
+            />
+          )
+        })}
 
 
       </div>

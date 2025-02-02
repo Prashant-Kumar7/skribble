@@ -26,7 +26,7 @@ interface GameState {
     currentDrawing : WebSocket | null,
     indexOfUser : number
     wordToGuess : string
-    // secondTimer: null | NodeJS.Timeout
+    currentRoundNo : number
     secondTimer: any
     secondTime : number
 }
@@ -55,7 +55,8 @@ export class RoomManager {
             wordToGuess : "",
             indexOfUser : 0,
             secondTime: 0,
-            secondTimer: null
+            secondTimer: null,
+            currentRoundNo : 0
         }
         this.GameSetting = {
             noOfRounds : 0,
@@ -125,11 +126,7 @@ export class RoomManager {
         } catch (error) {
             console.error(error);
         }
-        // this.usernames.forEach((user)=>{
-        //     this.participants[user]?.send(JSON.stringify({type : "GET_WORD", word : message.word}))
-        // })
-        // socket.send(JSON.stringify({type : "GET_WORD", word : message.word}))
-        // console.log("start event tiggered")
+        
     }
 
 
@@ -140,33 +137,12 @@ export class RoomManager {
         if(this.host.username === username){
             this.host.socket = socket
         }
-        // if(this.host.username === username){
-        //     this.host.socket = socket
-        //     // this.participants.push({socket : this.host.socket, username : this.host.username})
-        //     this.participants = {
-        //         ...this.participants,
-        //         [username] : socket
-        //     }
-        // } else{
-
-        //     this.participants = {
-        //         ...this.participants,
-        //         [username] : socket
-        //     }
-        //     // console.log("user found", user)
-
-
-        //     // this.participants.push({socket : socket , username : username})
-            
-        //     // if(user){
-        //     // }
-        // }
+        
         this.participants = {
             ...this.participants,
             [username] : socket
         }
 
-        console.log(this.participants)
         this.usernames.forEach((user)=>{
             this.participants[user]?.send(JSON.stringify({type : "PLAYERS", players : this.usernames}))
         })
@@ -174,12 +150,7 @@ export class RoomManager {
 
     message(ws : WebSocket, message : string){
 
-        // const sender = this.participants.find((user)=>{
-        //     return user.socket === ws
-        // })
-        // this.participants.map((user)=>{
-        //     user.socket?.send(JSON.stringify({type : "MESSAGE", payload : `${sender?.username} : ${message}`}))
-        // })
+        
     }
 
     
@@ -207,12 +178,13 @@ export class RoomManager {
 
 
     async secondTimerOfGame(socket : WebSocket, message : any){
-        console.log("second timer started")
+        // this.usernames = this.usernames.sort(function(){return 0.5 - Math.random()})
         const gameSettings = message.gameSettings
-
         this.GameSetting.diffuclty = gameSettings.diffuclty
         this.GameSetting.timeSlot = gameSettings.timeSlot
         this.GameSetting.noOfRounds = gameSettings.rounds
+        this.GameState.currentRoundNo =  1
+        
 
         const options = {
             method: 'GET',
@@ -227,7 +199,7 @@ export class RoomManager {
         const result = await axios.request(options)
         this.GameState.wordToGuess = result.data.word
         this.usernames.forEach((user)=>{
-            this.participants[user]?.send(JSON.stringify({type : "GET_WORD", word : this.GameState.wordToGuess, gameSetting : this.GameSetting}))
+            this.participants[user]?.send(JSON.stringify({type : "GET_WORD", word : this.GameState.wordToGuess, gameSetting : this.GameSetting, currentGameState : this.GameState}))
         })
         this.GameState.secondTimer = setInterval(() => {
             this.GameState.secondTime = this.GameState.secondTime + 1
@@ -251,6 +223,22 @@ export class RoomManager {
                     JSON.stringify({ type: "SECOND_TIMER_STOPPED", time: 0 })
                 );
             });
+
+
+            
+            if(this.GameState.indexOfUser < this.usernames.length - 1){
+                this.GameState.indexOfUser = this.GameState.indexOfUser + 1 
+            }else {
+                this.GameState.indexOfUser = 0
+                this.GameState.currentRoundNo = this.GameState.currentRoundNo + 1
+                if(this.GameState.currentRoundNo > this.GameSetting.noOfRounds){
+                    await this.gameOver()
+                    return
+                }
+            }
+
+
+
             const options = {
                 method: 'GET',
                 url: 'https://pictionary-charades-word-generator.p.rapidapi.com/charades',
@@ -266,7 +254,7 @@ export class RoomManager {
             setTimeout(()=>{
                 this.usernames.forEach((user) => {
                     this.participants[user]?.send(
-                        JSON.stringify({ type: "WORD", word : this.GameState.wordToGuess })
+                        JSON.stringify({ type: "WORD", word : this.GameState.wordToGuess, currentGameState : this.GameState })
                     );
                 });
             },2000)
@@ -298,6 +286,18 @@ export class RoomManager {
             this.GameState.secondTime = 0;
         }
         socket.send(JSON.stringify({type: "TIMER_RESET"}));
+    }
+
+    gameOver(){
+        if (this.GameState.secondTimer) {
+            console.log("time stopped")
+            clearInterval(this.GameState.secondTimer);
+            this.GameState.secondTimer = null;
+            this.GameState.secondTime = 0;
+            this.usernames.forEach((user)=>{
+                this.participants[user]?.send(JSON.stringify({type: "GAME_OVER", time: 0}))
+            })
+        }
     }
     
 }
