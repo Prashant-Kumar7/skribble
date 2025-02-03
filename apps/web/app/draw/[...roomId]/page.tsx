@@ -1,8 +1,12 @@
 "use client";
 
 import GameOptions from "@/components/game-options";
+import { Modal } from "@/components/modal";
 import { Players } from "@/components/players";
+import { Dialog, DialogContent, DialogTitle } from "@/components/scoreCard";
+import { WordToGuess } from "@/components/wordToGuess";
 import axios from "axios";
+import { X } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useRef, useState, useEffect } from "react";
 
@@ -26,7 +30,15 @@ export default function Whiteboard() {
   const [startClick, setStartClick] = useState(false)
   const [counter, setCounter] = useState(0)
   const [word, setWord] = useState("")
+  const [wordLength, setWordLength] = useState(0)
   const [players, setPlayes] = useState<any[]>([])
+  const [letterArray, setLetterArray] = useState<string[]>([])
+  const [isDrawingDisabled, setIsDrawingDisabled] = useState(true);
+  const [gameStarrted, setGameStarrted] = useState(false)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [roundOver, setRoundOver] = useState(false)
+  const [currentRound, setCurrentRound] = useState(0)
+  const [currentUser, setCurrentUser] = useState("")
 
   useEffect(() => {
     const newSocket = new WebSocket("ws://localhost:8080");
@@ -69,13 +81,26 @@ export default function Whiteboard() {
           setCounter(timeSlot - data.time)
           break;
         case "SECOND_TIMER_STOPPED": 
+          // setIsDrawingDisabled(false)
+          setCurrentUser("")
+          setIsModalOpen(true)
+          setRoundOver(true)
+          setWord("")
+          setLetterArray([])
+          setWordLength(0)
+          setIsDrawingDisabled(true)
           console.log("Round end")
-          
+          if(canvasRef.current)ctxRef.current.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
 
           break;
         case "GET_WORD":
           console.log(data)
+          setCurrentRound(data.currentRoundNo)
+          setRoundOver(false)
+          setCurrentUser(data.currentUser)
+          setIsModalOpen(true)
           setWord(data.word)
+          setIsDrawingDisabled(false)
           const gameSettings = data.gameSetting
           setDifficulty(gameSettings.diffuclty)
           setTimeSlot(Number(gameSettings.timeSlot))
@@ -84,10 +109,16 @@ export default function Whiteboard() {
           break;
         case "WORD":
           setWord(data.word)
+          setCurrentRound(data.currentRoundNo)
+          setCurrentUser(data.currentUser)
+          setIsModalOpen(true)
+          setRoundOver(false)
+          setIsDrawingDisabled(false)
           console.log(data)
           break;
         case "SECOND_TIMER":
           // console.log(data)
+          setIsModalOpen(false)
           setCounter(data.time)
           if(data.word){
             setWord(data.word)
@@ -96,12 +127,29 @@ export default function Whiteboard() {
         case "PLAYERS":
           setPlayes(data.players)
           break;
+        case "WORD_LENGTH":
+          setRoundOver(false)
+          setCurrentRound(data.currentRoundNo)
+          setCurrentUser(data.currentUser)
+          setWordLength(data.wordLength)
+          setLetterArray(new Array(data.wordLength).fill(""))
+          break;
+        
+        case "GAME_OVER":
+          console.log(data)
+          setWordLength(0)
+          setCurrentUser("")
+          setWord("")
+          setRoundOver(false)
+          setCurrentRound(0)
+
+          break;
+
       }
     };
 
     return () =>{
       newSocket.close();
-
     }
 
   }, []);
@@ -132,7 +180,7 @@ export default function Whiteboard() {
   },[counter])
 
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!ctxRef.current) return;
+    if (!ctxRef.current || isDrawingDisabled) return;
     const x = e.nativeEvent.offsetX;
     const y = e.nativeEvent.offsetY;
 
@@ -151,7 +199,7 @@ export default function Whiteboard() {
   };
 
   const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!drawing || !ctxRef.current || !socket) return;
+    if (!drawing || !ctxRef.current || !socket || isDrawingDisabled) return;
     const x = e.nativeEvent.offsetX;
     const y = e.nativeEvent.offsetY;
 
@@ -202,13 +250,17 @@ export default function Whiteboard() {
   return (
     <div className="w-screen h-screen grid grid-cols-12">
       <div className="col-span-2 p-4">
-        <span className="text-xl">Players</span>
+        <div className="text-xl flex justify-between">
+          <span>Players</span>
+          <span>Round No. {currentRound}</span>
+        </div>
 
         {players.map((player, index)=>{
           return (
             <Players
             key={index}
             player={player}
+            currentUser={currentUser}
             />
           )
         })}
@@ -245,7 +297,22 @@ export default function Whiteboard() {
       />
       <div className="w-full">
         <div style={{marginBottom : "-2rem"}} className="text-left mt-10"> Timer : {timeSlot - counter} Sec</div>
-        <div className="w-full text-2xl text-center"> Word : {word}</div>
+        {/* <div className="w-full text-2xl text-center">{isDrawingDisabled? `Word length : ${wordLength}` : `Word : ${word}`}</div> */}
+        <div className="flex w-full justify-center">
+          {isDrawingDisabled? 
+            <div className="flex gap-1 mb-2">
+              {letterArray.map((item , index)=>{
+                return (
+                  <WordToGuess
+                  key={index}
+                  letter={item}
+                  />
+                )
+              })}
+            </div>
+            : <span className="font-semibold text-2xl">{word}</span> 
+          }
+        </div>
       </div>
     </div>
     <div className="col-span-1">
@@ -298,16 +365,32 @@ export default function Whiteboard() {
           Start
         </button>
       </div>
-      {/* <GameOptions
-      timeSlot={timeSlot}
-      rounds={rounds}
-      difficulty={difficulty}
-      setRounds={setRounds}
-      setTimeSlot={setTimeSlot}
-      setDifficulty={setDifficulty}
-      setStartClick = {setStartClick}
-      /> */}
+      
     </div>
+    <Dialog open={isModalOpen} onOpenChange={()=>setIsModalOpen(false)}>
+      <DialogContent  className="border-0 w-full h-full  flex justify-center items-center">
+        {roundOver? <div className="flex w-full flex-col px-12 gap-10">
+        <DialogTitle style={{marginTop : "-10rem"}} className="text-center text-4xl">Round Over</DialogTitle>
+          <div className="w-full h-full flex flex-col">
+            <div className="flex justify-between w-full text-2xl">
+              <span>Player</span>
+              <span>points</span>
+            </div>
+          </div>
+        </div>: word != "" ? <DialogTitle>your word is {word}</DialogTitle> : wordLength != 0 ? <DialogTitle>{currentUser} is drawing</DialogTitle>
+         : <div className="flex w-full flex-col px-12 gap-10">
+          <X onClick={()=>setIsModalOpen(false)} className="h-4 w-4" />
+          <DialogTitle>
+            Game Over      
+          </DialogTitle>
+         </div> }
+      </DialogContent>
+    </Dialog>
+    
     </div>
   );
 }
+
+
+
+

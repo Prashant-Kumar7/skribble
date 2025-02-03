@@ -1,5 +1,6 @@
 import axios from "axios"
 import { WebSocket } from "ws"
+import { options } from ".."
 
 interface RoomState {
     strokes  : string
@@ -186,20 +187,16 @@ export class RoomManager {
         this.GameState.currentRoundNo =  1
         
 
-        const options = {
-            method: 'GET',
-            url: 'https://pictionary-charades-word-generator.p.rapidapi.com/charades',
-            params: {difficulty: 'easy'},
-            headers: {
-              'x-rapidapi-key': 'd45294517dmsh2552cb4e52f16d3p1baaf1jsn54f81eb192ce',
-              'x-rapidapi-host': 'pictionary-charades-word-generator.p.rapidapi.com'
-            }
-        };
+        
 
         const result = await axios.request(options)
         this.GameState.wordToGuess = result.data.word
         this.usernames.forEach((user)=>{
-            this.participants[user]?.send(JSON.stringify({type : "GET_WORD", word : this.GameState.wordToGuess, gameSetting : this.GameSetting, currentGameState : this.GameState}))
+            if(user===this.usernames[this.GameState.indexOfUser]){
+                this.participants[user]?.send(JSON.stringify({type : "GET_WORD", word : this.GameState.wordToGuess, gameSetting : this.GameSetting, currentRoundNo : this.GameState.currentRoundNo, currentUser : this.usernames[this.GameState.indexOfUser]}))
+            }else{
+                this.participants[user]?.send(JSON.stringify({type : "WORD_LENGTH", wordLength : this.GameState.wordToGuess.length, gameSetting : this.GameSetting, currentRoundNo : this.GameState.currentRoundNo, currentUser : this.usernames[this.GameState.indexOfUser]}))
+            }
         })
         this.GameState.secondTimer = setInterval(() => {
             this.GameState.secondTime = this.GameState.secondTime + 1
@@ -232,32 +229,35 @@ export class RoomManager {
                 this.GameState.indexOfUser = 0
                 this.GameState.currentRoundNo = this.GameState.currentRoundNo + 1
                 if(this.GameState.currentRoundNo > this.GameSetting.noOfRounds){
-                    await this.gameOver()
+                    console.log("game Over")
+                    clearInterval(this.GameState.secondTimer);
+                    this.GameState.secondTimer = null;
+                    this.GameState.secondTime = 0;
+                    setTimeout(()=>{
+                        this.usernames.forEach((user)=>{
+                            this.participants[user]?.send(JSON.stringify({type: "GAME_OVER", time: 0}))
+                        })
+                    },5000)
+                    
                     return
                 }
             }
 
 
 
-            const options = {
-                method: 'GET',
-                url: 'https://pictionary-charades-word-generator.p.rapidapi.com/charades',
-                params: {difficulty: 'easy'},
-                headers: {
-                  'x-rapidapi-key': 'd45294517dmsh2552cb4e52f16d3p1baaf1jsn54f81eb192ce',
-                  'x-rapidapi-host': 'pictionary-charades-word-generator.p.rapidapi.com'
-                }
-            };
+            
 
             const result = await axios.request(options)
             this.GameState.wordToGuess = result.data.word
             setTimeout(()=>{
                 this.usernames.forEach((user) => {
-                    this.participants[user]?.send(
-                        JSON.stringify({ type: "WORD", word : this.GameState.wordToGuess, currentGameState : this.GameState })
-                    );
+                    if(user===this.usernames[this.GameState.indexOfUser]){
+                        this.participants[user]?.send(JSON.stringify({ type: "WORD", word : this.GameState.wordToGuess, currentRoundNo : this.GameState.currentRoundNo, currentUser : this.usernames[this.GameState.indexOfUser] }));
+                    }else{
+                        this.participants[user]?.send(JSON.stringify({ type: "WORD_LENGTH", wordLength : this.GameState.wordToGuess.length, currentRoundNo : this.GameState.currentRoundNo, currentUser : this.usernames[this.GameState.indexOfUser] }));
+                    }
                 });
-            },2000)
+            },4000)
 
             // Restart the timer after a 2-second delay
             setTimeout(() => {
@@ -270,7 +270,7 @@ export class RoomManager {
                         );
                     });
                 }, 1000);
-            }, 5000); // 2-second delay before restarting
+            }, 10000); // 2-second delay before restarting
         }
     }
 
@@ -290,7 +290,7 @@ export class RoomManager {
 
     gameOver(){
         if (this.GameState.secondTimer) {
-            console.log("time stopped")
+            console.log("game Over")
             clearInterval(this.GameState.secondTimer);
             this.GameState.secondTimer = null;
             this.GameState.secondTime = 0;
