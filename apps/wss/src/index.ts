@@ -15,14 +15,14 @@ export const client = createClient({
 });
 
 export const options = {
-    method: 'GET',
-    url: 'https://pictionary-charades-word-generator.p.rapidapi.com/charades',
-    params: {difficulty: 'easy'},
-    headers: {
-      'x-rapidapi-key': '63153625d8mshc221c319a429628p1793d7jsn7c2583c26a49',
-      'x-rapidapi-host': 'pictionary-charades-word-generator.p.rapidapi.com'
-    }
-  };
+  method: 'GET',
+  url: 'https://pictionary-charades-word-generator.p.rapidapi.com/charades',
+  params: {difficulty: 'easy'},
+  headers: {
+    'x-rapidapi-key': '7372730244msh829da842f0199ddp136cecjsn469c2feddd13',
+    'x-rapidapi-host': 'pictionary-charades-word-generator.p.rapidapi.com'
+  }
+};
 
 client.on('error', err => console.log('Redis Client Error', err));
 

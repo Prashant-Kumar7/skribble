@@ -33,13 +33,20 @@ interface GameState {
 }
 
 
+interface Players {
+    name : string,
+    score : number,
+    wordGuessed : boolean
+}
+
+
 export class RoomManager {
     private participants : Users
     public roomId : string
     private host : Host
     // private admin : WebSocket | null
     private GameState : GameState
-    private usernames : string[]
+    private usernames : Players[]
     private GameSetting : GameSettings
 
 
@@ -67,20 +74,24 @@ export class RoomManager {
     }
 
     joinHttp(username : string){
-        this.usernames.push(username)
+        this.usernames.push({
+            name : username,
+            score : 0,
+            wordGuessed: false
+        })
         this.participants = {
             ...this.participants,
             [username] : null
         }
     }
 
-    randomizePlayers() {
-        this.usernames = this.usernames.sort(function(){return 0.5 - Math.random()})
-    }
+    // randomizePlayers() {
+    //     this.usernames = this.usernames.sort(function(){return 0.5 - Math.random()})
+    // }
 
     startGame(socket : WebSocket, parsedMessage : any){
         if(socket === this.host.socket){
-            this.randomizePlayers()
+            // this.randomizePlayers()
             this.GameSetting = {
                 ...this.GameSetting,
                 timeSlot : parsedMessage.timeSlot,
@@ -90,8 +101,8 @@ export class RoomManager {
 
             // this.gameState(socket, parsedMessage)
             this.usernames.forEach((user)=>{
-                if(socket != this.participants[user]){
-                    this.participants[user]?.send(JSON.stringify({type : "START_GAME", payload : this.GameState}))
+                if(socket != this.participants[user.name]){
+                    this.participants[user.name]?.send(JSON.stringify({type : "START_GAME", payload : this.GameState}))
                 }
             })
         }
@@ -101,7 +112,7 @@ export class RoomManager {
 
         this.GameState = {
             ...this.GameState,
-            currentDrawing : this.participants[this.usernames[this.GameState.indexOfUser]],
+            currentDrawing : this.participants[this.usernames[this.GameState.indexOfUser].name],
             wordToGuess : parsedMessage.word,
         }
     }
@@ -122,7 +133,7 @@ export class RoomManager {
             this.GameState.wordToGuess = response.data.word
             
             this.usernames.forEach((user)=>{
-                this.participants[user]?.send(JSON.stringify({type : "GET_WORD", word : this.GameState}))
+                this.participants[user.name]?.send(JSON.stringify({type : "GET_WORD", word : this.GameState}))
             })
         } catch (error) {
             console.error(error);
@@ -145,12 +156,32 @@ export class RoomManager {
         }
 
         this.usernames.forEach((user)=>{
-            this.participants[user]?.send(JSON.stringify({type : "PLAYERS", players : this.usernames}))
+            this.participants[user.name]?.send(JSON.stringify({type : "PLAYERS", players : this.usernames}))
         })
     }
 
-    message(ws : WebSocket, message : string){
+    message(ws : WebSocket, parsedMessage : any){
 
+        
+
+        const word  = this.GameState.wordToGuess
+        if(parsedMessage.message===this.GameState.wordToGuess){
+            this.usernames.forEach((user)=>{
+                if(user.name===parsedMessage.username){
+                    user.wordGuessed = true
+                }
+                this.participants[user.name]?.send(JSON.stringify({type : "WORD_MATCHED", message: `${parsedMessage.username} : Guessed the word`, username : parsedMessage.username}))
+            })
+            console.log(this.usernames)
+        }else if(word.slice(0, this.GameState.wordToGuess.length-1) === parsedMessage.message){
+            this.usernames.forEach((user)=>{
+                this.participants[user.name]?.send(JSON.stringify({type : "MESSAGE", message: `${parsedMessage.username} : Close guess`}))
+            })
+        }else {
+            this.usernames.forEach((user)=>{
+                this.participants[user.name]?.send(JSON.stringify({type : "MESSAGE", message: `${parsedMessage.username} : ${parsedMessage.message}`}))
+            })
+        }
         
     }
 
@@ -163,8 +194,8 @@ export class RoomManager {
     drawEvent(socket: WebSocket, parsedMessage : any){
         
         this.usernames.forEach((user)=>{
-            if(socket != this.participants[user]){
-                this.participants[user]?.send(JSON.stringify(parsedMessage))
+            if(socket != this.participants[user.name]){
+                this.participants[user.name]?.send(JSON.stringify(parsedMessage))
             }
         })
     }
@@ -193,15 +224,15 @@ export class RoomManager {
         this.GameState.wordToGuess = result.data.word
         this.usernames.forEach((user)=>{
             if(user===this.usernames[this.GameState.indexOfUser]){
-                this.participants[user]?.send(JSON.stringify({type : "GET_WORD", word : this.GameState.wordToGuess, gameSetting : this.GameSetting, currentRoundNo : this.GameState.currentRoundNo, currentUser : this.usernames[this.GameState.indexOfUser]}))
+                this.participants[user.name]?.send(JSON.stringify({type : "GET_WORD", word : this.GameState.wordToGuess, gameSetting : this.GameSetting, currentRoundNo : this.GameState.currentRoundNo, currentUser : this.usernames[this.GameState.indexOfUser].name}))
             }else{
-                this.participants[user]?.send(JSON.stringify({type : "WORD_LENGTH", wordLength : this.GameState.wordToGuess.length, gameSetting : this.GameSetting, currentRoundNo : this.GameState.currentRoundNo, currentUser : this.usernames[this.GameState.indexOfUser]}))
+                this.participants[user.name]?.send(JSON.stringify({type : "WORD_LENGTH", wordLength : this.GameState.wordToGuess.length, gameSetting : this.GameSetting, currentRoundNo : this.GameState.currentRoundNo, currentUser : this.usernames[this.GameState.indexOfUser].name}))
             }
         })
         this.GameState.secondTimer = setInterval(() => {
             this.GameState.secondTime = this.GameState.secondTime + 1
             this.usernames.forEach((user)=>{
-                this.participants[user]?.send(JSON.stringify({type : "SECOND_TIMER", time: this.GameState.secondTime}))
+                this.participants[user.name]?.send(JSON.stringify({type : "SECOND_TIMER", time: this.GameState.secondTime}))
             })
         }, 1000);
     }
@@ -216,7 +247,7 @@ export class RoomManager {
     
             // Notify clients that the timer has stopped
             this.usernames.forEach((user) => {
-                this.participants[user]?.send(
+                this.participants[user.name]?.send(
                     JSON.stringify({ type: "SECOND_TIMER_STOPPED", time: 0 })
                 );
             });
@@ -235,7 +266,7 @@ export class RoomManager {
                     this.GameState.secondTime = 0;
                     setTimeout(()=>{
                         this.usernames.forEach((user)=>{
-                            this.participants[user]?.send(JSON.stringify({type: "GAME_OVER", time: 0}))
+                            this.participants[user.name]?.send(JSON.stringify({type: "GAME_OVER", time: 0}))
                         })
                     },5000)
                     
@@ -252,9 +283,9 @@ export class RoomManager {
             setTimeout(()=>{
                 this.usernames.forEach((user) => {
                     if(user===this.usernames[this.GameState.indexOfUser]){
-                        this.participants[user]?.send(JSON.stringify({ type: "WORD", word : this.GameState.wordToGuess, currentRoundNo : this.GameState.currentRoundNo, currentUser : this.usernames[this.GameState.indexOfUser] }));
+                        this.participants[user.name]?.send(JSON.stringify({ type: "WORD", word : this.GameState.wordToGuess, currentRoundNo : this.GameState.currentRoundNo, currentUser : this.usernames[this.GameState.indexOfUser].name }));
                     }else{
-                        this.participants[user]?.send(JSON.stringify({ type: "WORD_LENGTH", wordLength : this.GameState.wordToGuess.length, currentRoundNo : this.GameState.currentRoundNo, currentUser : this.usernames[this.GameState.indexOfUser] }));
+                        this.participants[user.name]?.send(JSON.stringify({ type: "WORD_LENGTH", wordLength : this.GameState.wordToGuess.length, currentRoundNo : this.GameState.currentRoundNo, currentUser : this.usernames[this.GameState.indexOfUser].name }));
                     }
                 });
             },4000)
@@ -265,7 +296,7 @@ export class RoomManager {
                 this.GameState.secondTimer = setInterval(() => {
                     this.GameState.secondTime += 1;
                     this.usernames.forEach((user) => {
-                        this.participants[user]?.send(
+                        this.participants[user.name]?.send(
                             JSON.stringify({ type: "SECOND_TIMER", time: this.GameState.secondTime, word : this.GameState.wordToGuess })
                         );
                     });
@@ -295,7 +326,7 @@ export class RoomManager {
             this.GameState.secondTimer = null;
             this.GameState.secondTime = 0;
             this.usernames.forEach((user)=>{
-                this.participants[user]?.send(JSON.stringify({type: "GAME_OVER", time: 0}))
+                this.participants[user.name]?.send(JSON.stringify({type: "GAME_OVER", time: 0}))
             })
         }
     }

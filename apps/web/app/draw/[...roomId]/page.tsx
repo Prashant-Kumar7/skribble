@@ -4,14 +4,17 @@ import GameOptions from "@/components/game-options";
 import { Modal } from "@/components/modal";
 import { Players } from "@/components/players";
 import { Dialog, DialogContent, DialogTitle } from "@/components/scoreCard";
+import { Message } from "@/components/ui/message";
 import { WordToGuess } from "@/components/wordToGuess";
 import axios from "axios";
 import { X } from "lucide-react";
 import { useParams } from "next/navigation";
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useMemo } from "react";
 
-export function delay(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+interface PlayersType {
+  name : string,
+  score : number,
+  wordGuessed : boolean
 }
 
 
@@ -31,14 +34,17 @@ export default function Whiteboard() {
   const [counter, setCounter] = useState(0)
   const [word, setWord] = useState("")
   const [wordLength, setWordLength] = useState(0)
-  const [players, setPlayes] = useState<any[]>([])
+  const [players, setPlayers] = useState<PlayersType[]>([])
   const [letterArray, setLetterArray] = useState<string[]>([])
   const [isDrawingDisabled, setIsDrawingDisabled] = useState(true);
-  const [gameStarrted, setGameStarrted] = useState(false)
+  const [gameStarted, setGameStarted] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [roundOver, setRoundOver] = useState(false)
   const [currentRound, setCurrentRound] = useState(0)
   const [currentUser, setCurrentUser] = useState("")
+  const [input, setInput] = useState("")
+  const [messageArray, setMessageArray] = useState<string[]>([])
+  const [wordMatched, setWordMatched] = useState(false)
 
   useEffect(() => {
     const newSocket = new WebSocket("ws://localhost:8080");
@@ -89,6 +95,12 @@ export default function Whiteboard() {
           setLetterArray([])
           setWordLength(0)
           setIsDrawingDisabled(true)
+          setPlayers((prev: any)=>{
+            return prev.map((player : PlayersType)=>{
+              player.wordGuessed = false
+              return player
+            })
+          })
           console.log("Round end")
           if(canvasRef.current)ctxRef.current.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
 
@@ -96,6 +108,7 @@ export default function Whiteboard() {
         case "GET_WORD":
           console.log(data)
           setCurrentRound(data.currentRoundNo)
+          // setGameStarted(true)
           setRoundOver(false)
           setCurrentUser(data.currentUser)
           setIsModalOpen(true)
@@ -125,7 +138,7 @@ export default function Whiteboard() {
           }
           break
         case "PLAYERS":
-          setPlayes(data.players)
+          setPlayers(data.players)
           break;
         case "WORD_LENGTH":
           setRoundOver(false)
@@ -134,7 +147,29 @@ export default function Whiteboard() {
           setWordLength(data.wordLength)
           setLetterArray(new Array(data.wordLength).fill(""))
           break;
-        
+        case "MESSAGE":
+          setMessageArray((prev)=>{
+            return [...prev, data.message]
+          })
+          break;
+        case "WORD_MATCHED":
+          setMessageArray((prev)=>{
+            return [...prev, data.message]
+          })
+          setWordMatched((prev)=>{
+            return !prev
+          })
+          setPlayers((prev: any)=>{
+            console.log(prev)
+            return prev.map((user: PlayersType)=>{
+              console.log(user)
+              if(user.name===data.username){
+                user.wordGuessed = true
+              }
+              return user
+            })
+          })
+          break;
         case "GAME_OVER":
           console.log(data)
           setWordLength(0)
@@ -142,7 +177,6 @@ export default function Whiteboard() {
           setWord("")
           setRoundOver(false)
           setCurrentRound(0)
-
           break;
 
       }
@@ -247,6 +281,11 @@ export default function Whiteboard() {
     socket?.send(JSON.stringify({type : "CLEAR", roomId : params.roomId[0]}))
   };
 
+  const sendMessage = () =>{
+    socket?.send(JSON.stringify({type : "MESSAGE", roomId : params.roomId[0], message : input, username : name}))
+    setInput("")
+  }
+
   return (
     <div className="w-screen h-screen grid grid-cols-12">
       <div className="col-span-2 p-4">
@@ -259,7 +298,9 @@ export default function Whiteboard() {
           return (
             <Players
             key={index}
-            player={player}
+            player={player.name}
+            wordGuessed={player.wordGuessed}
+            score={player.score}
             currentUser={currentUser}
             />
           )
@@ -318,53 +359,78 @@ export default function Whiteboard() {
     <div className="col-span-1">
 
     </div>
-    <div className=" col-span-2 mt-16">
+    <div className=" col-span-3 mt-10">
       {/* <span>chat</span> */}
-      <div className="w-full h-full flex flex-col">
-        <div className="flex justify-between items-center m-2">
-          <span>Diffuclty :</span>
-          <select onChange={(e)=>setDifficulty(e.target.value)} name="Level" id="">
-            <option value="easy">easy</option>
-            <option value="medium">medium</option>
-            <option value="hard">hard</option>
-          </select>
+      {currentRound !=0 ? 
+       <div className="w-full h-full pr-4 grid grid-rows-12">
+        <div className="row-span-10 bg-zinc-800 p-2">
+          <div style={{borderRadius : "0.25rem", height : "37rem"}} className="h-full bg-zinc-900 flex flex-col w-full bg-red-500 overflow-y-auto">
+            {messageArray.map((item, index)=>{
+              return (
+                <Message
+                key={index}
+                index={index}
+                message={item}
+                />
+              )
+            })}
+          </div>
         </div>
-        <div className="flex justify-between items-center m-2">
-          <span>No. of Rounds :</span>
-          <select onChange={(e)=>setRounds(Number(e.target.value))} name="Rounds" id="">
-            <option value="3">3</option>
-            <option value="4">4</option>
-            <option value="5">5</option>
-            <option value="6">6</option>
-            <option value="7">7</option>
-          </select>
+        <div className="row-span-1 px-2 pb-2 bg-zinc-800">
+          <div style={{	borderRadius : "0.33rem"}} className="flex bg-zinc-900 h-full w-full">
+            <input onKeyDown={(e)=>{
+              if(e.key === "Enter")sendMessage()
+            }} onChange={(e)=>setInput(e.target.value)} value={input} className="px-1  w-full bg-transparent h-full  border-x-0 border-y-0 focus:ring-0 focus:outline-none" type="text" placeholder="Enter you guess"/>
+            <button onClick={sendMessage} className=" p-2 ">send</button>
+          </div>
         </div>
-        <div className="flex justify-between items-center m-2">
-          <span>Time to guess :</span>
-          <select onChange={(e)=>setTimeSlot(Number(e.target.value))} name="TimeSlot" id="">
-            <option value="30">30</option>
-            <option value="50">50</option>
-            <option value="80">80</option>
-            <option value="100">100</option>
-            <option value="120">120</option>
-          </select>
-        </div>
-        <button onClick={()=>{
-          
-          socket?.send(JSON.stringify({
-            type : "GET_WORD", 
-            roomId : params.roomId[0],
-            gameSettings : {
-              difficulty : difficulty, 
-              timeSlot : timeSlot, 
-              rounds : rounds
-            }
-          }))
-          
-        }} className="ml-4 px-3 py-1 bg-green-500 text-white rounded">
-          Start
-        </button>
-      </div>
+       </div>
+       : 
+       <div className="w-full h-full flex flex-col">
+       <div className="flex justify-between items-center m-2">
+         <span>Diffuclty :</span>
+         <select onChange={(e)=>setDifficulty(e.target.value)} name="Level" id="">
+           <option value="easy">easy</option>
+           <option value="medium">medium</option>
+           <option value="hard">hard</option>
+         </select>
+       </div>
+       <div className="flex justify-between items-center m-2">
+         <span>No. of Rounds :</span>
+         <select onChange={(e)=>setRounds(Number(e.target.value))} name="Rounds" id="">
+           <option value="3">3</option>
+           <option value="4">4</option>
+           <option value="5">5</option>
+           <option value="6">6</option>
+           <option value="7">7</option>
+         </select>
+       </div>
+       <div className="flex justify-between items-center m-2">
+         <span>Time to guess :</span>
+         <select onChange={(e)=>setTimeSlot(Number(e.target.value))} name="TimeSlot" id="">
+           <option value="30">30</option>
+           <option value="50">50</option>
+           <option value="80">80</option>
+           <option value="100">100</option>
+           <option value="120">120</option>
+         </select>
+       </div>
+       <button onClick={()=>{
+         
+         socket?.send(JSON.stringify({
+           type : "GET_WORD", 
+           roomId : params.roomId[0],
+           gameSettings : {
+             difficulty : difficulty, 
+             timeSlot : timeSlot, 
+             rounds : rounds
+           }
+         }))
+         
+       }} className="ml-4 px-3 py-1 bg-green-500 text-white rounded">
+         Start
+       </button>
+     </div>}
       
     </div>
     <Dialog open={isModalOpen} onOpenChange={()=>setIsModalOpen(false)}>

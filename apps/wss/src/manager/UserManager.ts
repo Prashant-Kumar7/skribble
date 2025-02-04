@@ -58,7 +58,7 @@ export class UserManager {
                     room?.getRoomState(socket);
                     break;
                 case "MESSAGE" : 
-                    room?.message(socket, parsedMessage.payload)
+                    room?.message(socket, parsedMessage)
                     break;
                 case "START_DRAWING" : 
                     room?.drawEvent(socket, parsedMessage)
