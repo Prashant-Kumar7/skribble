@@ -17,6 +17,11 @@ interface PlayersType {
   wordGuessed : boolean
 }
 
+interface LetterReveled {
+  index : number
+  letter : string
+}
+
 
 export default function Whiteboard() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -44,7 +49,8 @@ export default function Whiteboard() {
   const [currentUser, setCurrentUser] = useState("")
   const [input, setInput] = useState("")
   const [messageArray, setMessageArray] = useState<string[]>([])
-  const [wordMatched, setWordMatched] = useState(false)
+  // const [wordMatched, setWordMatched] = useState(false)
+  // const [letterReveled, setLetterReveled] = useState<LetterReveled[]>([])
 
   useEffect(() => {
     const newSocket = new WebSocket("ws://localhost:8080");
@@ -133,8 +139,16 @@ export default function Whiteboard() {
           // console.log(data)
           setIsModalOpen(false)
           setCounter(data.time)
-          if(data.word){
-            setWord(data.word)
+          // if(data.word){
+          //   setWord(data.word)
+          // }
+          if(data.reveledIndex && data.letterReveled){
+            console.log(data.reveledIndex , data.letterReveled)
+            setLetterArray((items)=>{
+              const newArray = [...items]; // Create a shallow copy
+              newArray[data.reveledIndex] = data.letterReveled; // Modify the copy
+              return newArray
+            })
           }
           break
         case "PLAYERS":
@@ -156,9 +170,7 @@ export default function Whiteboard() {
           setMessageArray((prev)=>{
             return [...prev, data.message]
           })
-          setWordMatched((prev)=>{
-            return !prev
-          })
+          
           setPlayers((prev: any)=>{
             console.log(prev)
             return prev.map((user: PlayersType)=>{

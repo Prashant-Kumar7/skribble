@@ -30,6 +30,7 @@ interface GameState {
     currentRoundNo : number
     secondTimer: any
     secondTime : number
+    reveledIndex : number[]
 }
 
 
@@ -64,7 +65,8 @@ export class RoomManager {
             indexOfUser : 0,
             secondTime: 0,
             secondTimer: null,
-            currentRoundNo : 0
+            currentRoundNo : 0,
+            reveledIndex : []
         }
         this.GameSetting = {
             noOfRounds : 0,
@@ -217,6 +219,11 @@ export class RoomManager {
         this.GameSetting.noOfRounds = gameSettings.rounds
         this.GameState.currentRoundNo =  1
         
+        function getRandomNumberInRange(min: number, max: number, excluded: number[]): number {
+            const numbers = Array.from({ length: max - min + 1 }, (_, i) => min + i).filter(n => !excluded.includes(n));
+            if (numbers.length === 0) throw new Error("No numbers left to choose from");
+            return numbers[Math.floor(Math.random() * numbers.length)];
+        }
 
         
 
@@ -231,20 +238,34 @@ export class RoomManager {
         })
         this.GameState.secondTimer = setInterval(() => {
             this.GameState.secondTime = this.GameState.secondTime + 1
-            this.usernames.forEach((user)=>{
-                this.participants[user.name]?.send(JSON.stringify({type : "SECOND_TIMER", time: this.GameState.secondTime}))
-            })
+            if(this.GameState.secondTime > this.GameSetting.timeSlot/2 && this.GameState.reveledIndex.length===0){
+                const randomNumber: number = getRandomNumberInRange(0,this.GameState.wordToGuess.length-1, this.GameState.reveledIndex)
+                this.GameState.reveledIndex.push(randomNumber)
+                this.usernames.forEach((user)=>{
+                    this.participants[user.name]?.send(JSON.stringify({type : "SECOND_TIMER", time: this.GameState.secondTime, reveledIndex : randomNumber, letterReveled : this.GameState.wordToGuess[randomNumber]}))
+                })
+            }else {
+                this.usernames.forEach((user)=>{
+                    this.participants[user.name]?.send(JSON.stringify({type : "SECOND_TIMER", time: this.GameState.secondTime}))
+                })
+            } 
+            
         }, 1000);
     }
 
     // Stop the second timer if needed
     async stopSecondTimer(socket: WebSocket) {
+        function getRandomNumberInRange(min: number, max: number, excluded: number[]): number {
+            const numbers = Array.from({ length: max - min + 1 }, (_, i) => min + i).filter(n => !excluded.includes(n));
+            if (numbers.length === 0) throw new Error("No numbers left to choose from");
+            return numbers[Math.floor(Math.random() * numbers.length)];
+        }
+        this.GameState.reveledIndex.pop()
         if (this.GameState.secondTimer) {
             console.log("Time stopped");
             clearInterval(this.GameState.secondTimer);
             this.GameState.secondTimer = null;
             this.GameState.secondTime = 0;
-    
             // Notify clients that the timer has stopped
             this.usernames.forEach((user) => {
                 this.participants[user.name]?.send(
@@ -261,6 +282,11 @@ export class RoomManager {
                 this.GameState.currentRoundNo = this.GameState.currentRoundNo + 1
                 if(this.GameState.currentRoundNo > this.GameSetting.noOfRounds){
                     console.log("game Over")
+                    this.GameState.currentRoundNo = 0
+                    this.GameState.indexOfUser=0
+                    this.GameState.wordToGuess = ""
+                    this.GameState.currentDrawing = null
+                    this.GameState.reveledIndex.pop()
                     clearInterval(this.GameState.secondTimer);
                     this.GameState.secondTimer = null;
                     this.GameState.secondTime = 0;
@@ -295,11 +321,20 @@ export class RoomManager {
                 console.log("Restarting timer...");
                 this.GameState.secondTimer = setInterval(() => {
                     this.GameState.secondTime += 1;
-                    this.usernames.forEach((user) => {
-                        this.participants[user.name]?.send(
-                            JSON.stringify({ type: "SECOND_TIMER", time: this.GameState.secondTime, word : this.GameState.wordToGuess })
-                        );
-                    });
+                    if(this.GameState.secondTime > this.GameSetting.timeSlot/2 && this.GameState.reveledIndex.length===0){
+
+                        const randomNumber: number = getRandomNumberInRange(0,this.GameState.wordToGuess.length-1, this.GameState.reveledIndex)
+                        this.GameState.reveledIndex.push(randomNumber)
+                        this.usernames.forEach((user)=>{
+                            this.participants[user.name]?.send(JSON.stringify({type : "SECOND_TIMER", time: this.GameState.secondTime, reveledIndex : randomNumber, letterReveled : this.GameState.wordToGuess[randomNumber],word : this.GameState.wordToGuess}))
+                        })
+                    }else {
+                        this.usernames.forEach((user) => {
+                            this.participants[user.name]?.send(
+                                JSON.stringify({ type: "SECOND_TIMER", time: this.GameState.secondTime, word : this.GameState.wordToGuess })
+                            );
+                        });
+                    }
                 }, 1000);
             }, 10000); // 2-second delay before restarting
         }
