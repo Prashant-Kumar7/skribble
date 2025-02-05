@@ -8,9 +8,10 @@ import axios from 'axios'
 import { useRouter } from 'next/navigation'
 interface CreateRoomFormProps {
   onClose: () => void
+  avatar : string
 }
 
-export function CreateRoomForm({ onClose }: CreateRoomFormProps) {
+export function CreateRoomForm({ onClose, avatar }: CreateRoomFormProps) {
     const [name, setName] = useState('')
     // const [roomId , setRoomId] = useState("")
     const router = useRouter()

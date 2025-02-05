@@ -7,9 +7,10 @@ import { useRouter } from 'next/navigation'
 
 interface JoinRoomFormProps {
   onClose: () => void
+  avatar : string
 }
 
-export function JoinRoomForm({ onClose }: JoinRoomFormProps) {
+export function JoinRoomForm({ onClose, avatar }: JoinRoomFormProps) {
   const [name, setName] = useState('')
   const [roomId, setRoomId] = useState('')
   const router = useRouter()

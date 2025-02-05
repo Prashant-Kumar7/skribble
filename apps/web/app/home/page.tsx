@@ -1,14 +1,19 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from "@/components/ui/button"
 import { Modal } from '@/components/modal'
 import { CreateRoomForm } from '@/components/create-room-form'
 import { JoinRoomForm } from '@/components/join-room-form'
+import axios from 'axios'
+import parse from 'html-react-parser';
+
 
 export default function LandingPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [modalContent, setModalContent] = useState<'create' | 'join' | null>(null)
+  const [svg, setSvg] = useState<string>("")
+  const [count, setCount] = useState<number>(0)
 
   const openModal = (content: 'create' | 'join') => {
     setModalContent(content)
@@ -20,9 +25,31 @@ export default function LandingPage() {
     setModalContent(null)
   }
 
+  useEffect(()=>{
+    axios.get("https://api.dicebear.com/7.x/bottts/svg?seed="+ count+Math.random()).then((res)=>{
+      setSvg(res.data)
+    })
+  },[count])
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-r from-blue-500 to-purple-600">
       <h1 className="text-4xl font-bold text-white mb-8">Welcome to Video Chat</h1>
+      <div className="flex justify-center items-center">
+      <div className="flex">
+        <div onClick={()=>setCount((prerv)=>prerv-1)} className=" flex items-center p-4">
+          <span className="text-4xl cursor-pointer hover:text-gray-300 font-semibold">
+            {"<"}
+          </span>
+        </div>
+        {parse(svg)}
+        <div onClick={()=>setCount((prerv)=>prerv+1)} className="flex items-center p-4">
+          <span className="text-4xl cursor-pointer hover:text-gray-300 font-semibold">
+            {">"}
+          </span>
+        </div>
+      </div>
+    </div>
+    <span className="text-2xl font-semibold text-white mb-8">Choose your Avatar</span>
       <div className="space-x-4">
         <Button onClick={() => openModal('create')} size="lg">
           Create Room
@@ -37,8 +64,8 @@ export default function LandingPage() {
         onClose={closeModal} 
         title={modalContent === 'create' ? 'Create a Room' : 'Join a Room'}
       >
-        {modalContent === 'create' && <CreateRoomForm onClose={closeModal} />}
-        {modalContent === 'join' && <JoinRoomForm onClose={closeModal} />}
+        {modalContent === 'create' && <CreateRoomForm onClose={closeModal} avatar={svg} />}
+        {modalContent === 'join' && <JoinRoomForm onClose={closeModal} avatar={svg} />}
       </Modal>
     </div>
   )
