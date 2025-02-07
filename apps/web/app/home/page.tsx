@@ -14,6 +14,8 @@ export default function LandingPage() {
   const [modalContent, setModalContent] = useState<'create' | 'join' | null>(null)
   const [svg, setSvg] = useState<string>("")
   const [count, setCount] = useState<number>(0)
+  const [avatar, setAvatar] = useState<string>("")
+  const [randomNumber, setRandomNumber] = useState<number>()
 
   const openModal = (content: 'create' | 'join') => {
     setModalContent(content)
@@ -26,8 +28,15 @@ export default function LandingPage() {
   }
 
   useEffect(()=>{
-    axios.get("https://api.dicebear.com/7.x/bottts/svg?seed="+ count+Math.random()).then((res)=>{
-      setSvg(res.data)
+    setRandomNumber(Math.random())
+  },[])
+
+  useEffect(()=>{
+    axios.get("https://api.dicebear.com/7.x/bottts/svg?seed="+ count+randomNumber).then((response)=>{
+    const smallAvatar = response.data.slice(0,4) + ` style="width:3rem;height:3rem;" ` + response.data.slice(5, response.data.length)
+    const largeAvatar = response.data.slice(0,4) + ` style="width:7rem;height:7rem;" ` + response.data.slice(5, response.data.length)
+      setSvg(smallAvatar)
+      setAvatar(largeAvatar)
     })
   },[count])
 
@@ -41,7 +50,9 @@ export default function LandingPage() {
             {"<"}
           </span>
         </div>
-        {parse(svg)}
+        <div style={{width : "7rem", height : "7rem"}}>
+          {parse(avatar)}
+        </div>
         <div onClick={()=>setCount((prerv)=>prerv+1)} className="flex items-center p-4">
           <span className="text-4xl cursor-pointer hover:text-gray-300 font-semibold">
             {">"}

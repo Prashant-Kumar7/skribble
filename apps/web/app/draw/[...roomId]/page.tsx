@@ -1,8 +1,10 @@
 "use client";
 
 import GameOptions from "@/components/game-options";
+import { GameOver } from "@/components/gameOver";
 import { Modal } from "@/components/modal";
 import { Players } from "@/components/players";
+import { RoundScore } from "@/components/roundScore";
 import { Dialog, DialogContent, DialogTitle } from "@/components/scoreCard";
 import { Message } from "@/components/ui/message";
 import { WordToGuess } from "@/components/wordToGuess";
@@ -14,12 +16,17 @@ import { useRef, useState, useEffect, useMemo } from "react";
 interface PlayersType {
   name : string,
   score : number,
-  wordGuessed : boolean
+  wordGuessed : boolean,
+  avatar : string
 }
 
 interface LetterReveled {
   index : number
   letter : string
+}
+
+interface RoundOverStateType {
+  [key : string] : number
 }
 
 
@@ -49,6 +56,10 @@ export default function Whiteboard() {
   const [currentUser, setCurrentUser] = useState("")
   const [input, setInput] = useState("")
   const [messageArray, setMessageArray] = useState<string[]>([])
+  const [roundOverState, setRoundOverState] = useState<RoundOverStateType>({})
+  const [inputDisabled , setInputDisabled] = useState(false)
+  const [countGuessedPlayers, setCountGuessedPlayers] = useState(0)
+  // const [avatar, setAvatar] = useState("")
   // const [wordMatched, setWordMatched] = useState(false)
   // const [letterReveled, setLetterReveled] = useState<LetterReveled[]>([])
 
@@ -94,6 +105,8 @@ export default function Whiteboard() {
           break;
         case "SECOND_TIMER_STOPPED": 
           // setIsDrawingDisabled(false)
+          setRoundOverState(data.roundScore)
+          setCountGuessedPlayers(0)
           setCurrentUser("")
           setIsModalOpen(true)
           setRoundOver(true)
@@ -104,10 +117,10 @@ export default function Whiteboard() {
           setPlayers((prev: any)=>{
             return prev.map((player : PlayersType)=>{
               player.wordGuessed = false
+              player.score = player.score + data.roundScore[player.name]
               return player
             })
           })
-          console.log("Round end")
           if(canvasRef.current)ctxRef.current.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
 
           break;
@@ -115,6 +128,7 @@ export default function Whiteboard() {
           console.log(data)
           setCurrentRound(data.currentRoundNo)
           // setGameStarted(true)
+          setInputDisabled(true)
           setRoundOver(false)
           setCurrentUser(data.currentUser)
           setIsModalOpen(true)
@@ -127,6 +141,7 @@ export default function Whiteboard() {
           socket?.send(JSON.stringify({type : "TIMER", roomId : params.roomId[0]}))
           break;
         case "WORD":
+          setInputDisabled(true)
           setWord(data.word)
           setCurrentRound(data.currentRoundNo)
           setCurrentUser(data.currentUser)
@@ -153,9 +168,11 @@ export default function Whiteboard() {
           break
         case "PLAYERS":
           setPlayers(data.players)
+          
           break;
         case "WORD_LENGTH":
           setRoundOver(false)
+          setInputDisabled(false)
           setCurrentRound(data.currentRoundNo)
           setCurrentUser(data.currentUser)
           setWordLength(data.wordLength)
@@ -167,14 +184,14 @@ export default function Whiteboard() {
           })
           break;
         case "WORD_MATCHED":
+          setInputDisabled(true)
           setMessageArray((prev)=>{
             return [...prev, data.message]
           })
-          
+          setCountGuessedPlayers(countGuessedPlayers+1)
           setPlayers((prev: any)=>{
             console.log(prev)
             return prev.map((user: PlayersType)=>{
-              console.log(user)
               if(user.name===data.username){
                 user.wordGuessed = true
               }
@@ -183,12 +200,13 @@ export default function Whiteboard() {
           })
           break;
         case "GAME_OVER":
-          console.log(data)
+          players.sort((a, b) => b.score - a.score)
           setWordLength(0)
           setCurrentUser("")
           setWord("")
           setRoundOver(false)
           setCurrentRound(0)
+          setPlayers(data.ScoreCard)
           break;
 
       }
@@ -224,6 +242,12 @@ export default function Whiteboard() {
       socket?.send(JSON.stringify({type : "ROUND_END", roomId : params.roomId[0]}))
     }    
   },[counter])
+
+  useEffect(()=>{
+    if(countGuessedPlayers === players.length-1){
+      socket?.send(JSON.stringify({type : "ROUND_END", roomId : params.roomId[0]}))
+    }
+  },[countGuessedPlayers])
 
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!ctxRef.current || isDrawingDisabled) return;
@@ -314,6 +338,7 @@ export default function Whiteboard() {
             wordGuessed={player.wordGuessed}
             score={player.score}
             currentUser={currentUser}
+            avatar={player.avatar}
             />
           )
         })}
@@ -390,7 +415,7 @@ export default function Whiteboard() {
         </div>
         <div className="row-span-1 px-2 pb-2 bg-zinc-800">
           <div style={{	borderRadius : "0.33rem"}} className="flex bg-zinc-900 h-full w-full">
-            <input onKeyDown={(e)=>{
+            <input disabled={inputDisabled} onKeyDown={(e)=>{
               if(e.key === "Enter")sendMessage()
             }} onChange={(e)=>setInput(e.target.value)} value={input} className="px-1  w-full bg-transparent h-full  border-x-0 border-y-0 focus:ring-0 focus:outline-none" type="text" placeholder="Enter you guess"/>
             <button onClick={sendMessage} className=" p-2 ">send</button>
@@ -445,21 +470,48 @@ export default function Whiteboard() {
      </div>}
       
     </div>
+                {/* isModalOpen */}
     <Dialog open={isModalOpen} onOpenChange={()=>setIsModalOpen(false)}>
       <DialogContent  className="border-0 w-full h-full  flex justify-center items-center">
-        {roundOver? <div className="flex w-full flex-col px-12 gap-10">
+        {/* roundOver */}
+        {roundOver? <div className="flex w-full flex-col px-12 gap-10"> 
         <DialogTitle style={{marginTop : "-10rem"}} className="text-center text-4xl">Round Over</DialogTitle>
           <div className="w-full h-full flex flex-col">
             <div className="flex justify-between w-full text-2xl">
               <span>Player</span>
               <span>points</span>
             </div>
+            {players.map((player, index)=>{
+              return <RoundScore
+              key={index}
+              name={player.name}
+              points={roundOverState[player.name]}
+              />
+            })}
           </div>
+          {/* word != "" */}                                           {/* wordLength != 0  */}
         </div>: word != "" ? <DialogTitle>your word is {word}</DialogTitle> : wordLength != 0 ? <DialogTitle>{currentUser} is drawing</DialogTitle>
          : <div className="flex w-full flex-col px-12 gap-10">
-          <X onClick={()=>setIsModalOpen(false)} className="h-4 w-4" />
+            <div className="flex justify-between">
+              <h1 className="font-bold w-full text-4xl text-center">Game Over</h1>
+              <X onClick={()=>setIsModalOpen(false)} className="h-4 w-4" />
+            </div>
           <DialogTitle>
-            Game Over      
+            {/* Game Over       */}
+            <div className="w-full h-full text-gray-300 grid grid-cols-3">
+            {players.map((player, index)=>{
+              
+              return <GameOver
+              key={index}
+              player={player.name}
+              rank={index+1}
+              avatar={player.avatar}
+              score={player.score}
+
+              />
+
+            })}
+          </div>
           </DialogTitle>
          </div> }
       </DialogContent>

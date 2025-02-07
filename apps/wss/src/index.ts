@@ -19,10 +19,11 @@ export const options = {
   url: 'https://pictionary-charades-word-generator.p.rapidapi.com/charades',
   params: {difficulty: 'easy'},
   headers: {
-    'x-rapidapi-key': '7372730244msh829da842f0199ddp136cecjsn469c2feddd13',
+    'x-rapidapi-key': 'aa87e0a673mshfe9cf5c6510de5ap1af9fbjsnb297d50bebd0',
     'x-rapidapi-host': 'pictionary-charades-word-generator.p.rapidapi.com'
   }
 };
+
 
 client.on('error', err => console.log('Redis Client Error', err));
 
@@ -61,12 +62,10 @@ async function StartQueue(){
   
                   const parsedMessage = JSON.parse(submission.element.toString())
                   if(parsedMessage.type === "JOIN"){
-                    console.log(submission.element)
                     users.joinRoom(submission.element)
                   }
   
                   if(parsedMessage.type === "CREATE"){
-                    console.log(submission.element)
                     users.createRoom(submission.element)
                   }
   

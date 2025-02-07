@@ -1,7 +1,14 @@
-export const Players = ({player, currentUser, wordGuessed, score} : {player : string, currentUser : string, wordGuessed:boolean, score : number})=>{
+import parse from 'html-react-parser';
+
+export const Players = ({player, currentUser, wordGuessed, score, avatar} : {player : string, currentUser : string, wordGuessed:boolean, score : number, avatar : string})=>{
     return (
-        <div className={`flex p-2 bg-gray-200 text-lg text-black justify-between ${wordGuessed? "bg-green-400" : ""}`}>
-          <span>{player}</span>
+        <div className={`flex p-2 bg-gray-200 text-lg text-black justify-between items-center ${wordGuessed? "bg-green-400" : ""}`}>
+          <div className="flex items-center gap-2 justify-center">
+            <div>
+              {parse(avatar)}
+            </div>
+            <span>{player}</span>
+          </div>
           <div className="flex">
             <span>points {score} </span>
             <svg  xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={player===currentUser?`size-6`: "hidden"}>
@@ -10,4 +17,4 @@ export const Players = ({player, currentUser, wordGuessed, score} : {player : st
           </div>
         </div>
     )
-} 
+}

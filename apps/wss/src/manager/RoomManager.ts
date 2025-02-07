@@ -23,6 +23,10 @@ interface GameSettings {
     noOfRounds : number
 }
 
+interface RoundOverScoreState {
+    [key : string] : number
+}
+
 interface GameState {
     currentDrawing : WebSocket | null,
     indexOfUser : number
@@ -31,18 +35,20 @@ interface GameState {
     secondTimer: any
     secondTime : number
     reveledIndex : number[]
+    roundOverScoreState : RoundOverScoreState
 }
 
 
 interface Players {
     name : string,
     score : number,
-    wordGuessed : boolean
+    wordGuessed : boolean,
+    avatar : string
 }
 
 
 export class RoomManager {
-    private participants : Users
+    public participants : Users
     public roomId : string
     private host : Host
     // private admin : WebSocket | null
@@ -66,7 +72,8 @@ export class RoomManager {
             secondTime: 0,
             secondTimer: null,
             currentRoundNo : 0,
-            reveledIndex : []
+            reveledIndex : [],
+            roundOverScoreState : {}
         }
         this.GameSetting = {
             noOfRounds : 0,
@@ -75,15 +82,20 @@ export class RoomManager {
         }
     }
 
-    joinHttp(username : string){
+    joinHttp(username : string,avatar : string){
         this.usernames.push({
             name : username,
             score : 0,
-            wordGuessed: false
+            wordGuessed: false,
+            avatar  : avatar
         })
         this.participants = {
             ...this.participants,
             [username] : null
+        }
+        this.GameState.roundOverScoreState = {
+            ...this.GameState.roundOverScoreState,
+            [username] : 0
         }
     }
 
@@ -158,7 +170,7 @@ export class RoomManager {
         }
 
         this.usernames.forEach((user)=>{
-            this.participants[user.name]?.send(JSON.stringify({type : "PLAYERS", players : this.usernames}))
+            this.participants[user.name]?.send(JSON.stringify({type : "PLAYERS", players : this.usernames, username : username}))
         })
     }
 
@@ -168,13 +180,29 @@ export class RoomManager {
 
         const word  = this.GameState.wordToGuess
         if(parsedMessage.message===this.GameState.wordToGuess){
+            let score: number
             this.usernames.forEach((user)=>{
                 if(user.name===parsedMessage.username){
                     user.wordGuessed = true
+                    if(this.GameState.secondTime < this.GameSetting.timeSlot*0.20){
+                        this.GameState.roundOverScoreState[user.name] = 200
+                        user.score = user.score + this.GameState.roundOverScoreState[user.name]
+                    }else if(this.GameState.secondTime < this.GameSetting.timeSlot*0.40){
+                        this.GameState.roundOverScoreState[user.name] = (0.80)*200
+                        user.score = user.score + this.GameState.roundOverScoreState[user.name]
+                    }else if(this.GameState.secondTime < this.GameSetting.timeSlot*0.60){
+                        this.GameState.roundOverScoreState[user.name] = (0.60)*200
+                        user.score = user.score + this.GameState.roundOverScoreState[user.name]
+                    }else if(this.GameState.secondTime < this.GameSetting.timeSlot*0.80){
+                        this.GameState.roundOverScoreState[user.name] = (0.40)*200
+                        user.score = user.score + this.GameState.roundOverScoreState[user.name]
+                    }else {
+                        this.GameState.roundOverScoreState[user.name] = (0.20)*200
+                        user.score = user.score + this.GameState.roundOverScoreState[user.name]
+                    }
                 }
                 this.participants[user.name]?.send(JSON.stringify({type : "WORD_MATCHED", message: `${parsedMessage.username} : Guessed the word`, username : parsedMessage.username}))
             })
-            console.log(this.usernames)
         }else if(word.slice(0, this.GameState.wordToGuess.length-1) === parsedMessage.message){
             this.usernames.forEach((user)=>{
                 this.participants[user.name]?.send(JSON.stringify({type : "MESSAGE", message: `${parsedMessage.username} : Close guess`}))
@@ -267,9 +295,13 @@ export class RoomManager {
             this.GameState.secondTimer = null;
             this.GameState.secondTime = 0;
             // Notify clients that the timer has stopped
+
             this.usernames.forEach((user) => {
+                if(!user.wordGuessed){
+                    user.score = user.score + 0
+                }
                 this.participants[user.name]?.send(
-                    JSON.stringify({ type: "SECOND_TIMER_STOPPED", time: 0 })
+                    JSON.stringify({ type: "SECOND_TIMER_STOPPED", time: 0, roundScore : this.GameState.roundOverScoreState })
                 );
             });
 
@@ -292,7 +324,8 @@ export class RoomManager {
                     this.GameState.secondTime = 0;
                     setTimeout(()=>{
                         this.usernames.forEach((user)=>{
-                            this.participants[user.name]?.send(JSON.stringify({type: "GAME_OVER", time: 0}))
+                            this.GameState.roundOverScoreState[user.name] = 0
+                            this.participants[user.name]?.send(JSON.stringify({type: "GAME_OVER", time: 0, ScoreCard : this.usernames}))
                         })
                     },5000)
                     
@@ -300,14 +333,11 @@ export class RoomManager {
                 }
             }
 
-
-
-            
-
             const result = await axios.request(options)
             this.GameState.wordToGuess = result.data.word
             setTimeout(()=>{
                 this.usernames.forEach((user) => {
+                    this.GameState.roundOverScoreState[user.name] = 0
                     if(user===this.usernames[this.GameState.indexOfUser]){
                         this.participants[user.name]?.send(JSON.stringify({ type: "WORD", word : this.GameState.wordToGuess, currentRoundNo : this.GameState.currentRoundNo, currentUser : this.usernames[this.GameState.indexOfUser].name }));
                     }else{

@@ -18,18 +18,24 @@ export class UserManager {
         this.addHandler(socket)
     }
 
-
     async joinRoom(message: string) {
         const parsedMessage = JSON.parse(message);
         const username = parsedMessage.name;
+        const avatar = parsedMessage.avatar
         const room = this.rooms.find((rm)=>{
             return rm.roomId === parsedMessage.roomId
         });
         if (room) {
-            room.joinHttp(username);
+            if(room.participants[username]){
+                await client.lPush(parsedMessage.processId, "name exists")
+                return
+            }
+            room.joinHttp(username, avatar);
             await client.lPush(parsedMessage.processId, message)
         } else {
-            console.error("Room not found for roomId:", parsedMessage.roomId);
+            await client.lPush(parsedMessage.processId, "room doesn't exists")
+            // console.error("Room not found for roomId:", parsedMessage.roomId);
+            return
         }
 
     }
@@ -39,7 +45,8 @@ export class UserManager {
         const parsedMessage = JSON.parse(message);
         const username = parsedMessage.name
         const room = new RoomManager(parsedMessage.roomId, username);
-        room.joinHttp(username);
+        const avatar = parsedMessage.avatar
+        room.joinHttp(username, avatar);
         this.rooms.push(room);
         await client.lPush(parsedMessage.processId, message)
     }
