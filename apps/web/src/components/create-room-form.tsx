@@ -20,9 +20,9 @@ export function CreateRoomForm({ onClose, avatar }: CreateRoomFormProps) {
     // Handle room creation logic here
     console.log('Creating room for:', name)
     localStorage.setItem("username", name);
-    axios.post("http://localhost:3000/api/v1/create-room", {name : name, avatar : avatar}).then((res)=>{
+    axios.post("http://ec2-43-204-110-237.ap-south-1.compute.amazonaws.com:3000/api/v1/create-room", {name : name, avatar : avatar}).then((res)=>{
         // setRoomId(res.data.roomId)
-        router.push(`/draw/${res.data.roomId}`)
+        router.push(`http://ec2-43-204-110-237.ap-south-1.compute.amazonaws.com:3000/draw/${res.data.roomId}`)
     })
 
     onClose()
