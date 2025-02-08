@@ -221,8 +221,8 @@ export default function Whiteboard() {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (canvas) {
-      canvas.width = 955; // 60rem * 16 (assuming 1rem = 16px)
-      canvas.height = 640; // 40rem * 16 (assuming 1rem = 16px)
+      canvas.width = 755; // 60rem * 16 (assuming 1rem = 16px)
+      canvas.height = 540; // 40rem * 16 (assuming 1rem = 16px)
       const ctx = canvas.getContext("2d");
       if (ctx) {
         ctx.lineCap = "round";
@@ -324,7 +324,7 @@ export default function Whiteboard() {
 
   return (
     <div className="w-screen h-screen grid grid-cols-12">
-      <div className="col-span-2 p-4">
+      <div className="col-span-3 p-4">
         <div className="text-xl flex justify-between">
           <span>Players</span>
           <span>Round No. {currentRound}</span>
@@ -345,7 +345,7 @@ export default function Whiteboard() {
 
 
       </div>
-      <div style={{height : "40rem" , width : "60rem"}} className="flex flex-col col-span-6 mt-10 justify-center items-center flex-col-reverse">
+    <div style={{height : "40rem" , width : "47.33rem"}} className="flex col-span-6 mt-2 justify-center items-center flex-col-reverse">
       <div className="mb-2">
         <label>Color: </label>
         <input type="color" value={color} onChange={(e) => setColor(e.target.value)} />
@@ -374,7 +374,7 @@ export default function Whiteboard() {
 
       />
       <div className="w-full">
-        <div style={{marginBottom : "-2rem"}} className="text-left mt-10"> Timer : {timeSlot - counter} Sec</div>
+        <div style={{marginBottom : ""}} className="text-left"> Timer : {timeSlot - counter} Sec</div>
         {/* <div className="w-full text-2xl text-center">{isDrawingDisabled? `Word length : ${wordLength}` : `Word : ${word}`}</div> */}
         <div className="flex w-full justify-center">
           {isDrawingDisabled? 
@@ -393,11 +393,7 @@ export default function Whiteboard() {
         </div>
       </div>
     </div>
-    <div className="col-span-1">
-
-    </div>
-    <div className=" col-span-3 mt-10">
-      {/* <span>chat</span> */}
+    <div className=" col-span-3 mt-4">
       {currentRound !=0 ? 
        <div className="w-full h-full pr-4 grid grid-rows-12">
         <div className="row-span-10 bg-zinc-800 p-2">
