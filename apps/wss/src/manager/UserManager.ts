@@ -20,6 +20,7 @@ export class UserManager {
 
     async joinRoom(message: string) {
         const parsedMessage = JSON.parse(message);
+        console.log(parsedMessage)
         const username = parsedMessage.name;
         const avatar = parsedMessage.avatar
         const room = this.rooms.find((rm)=>{
@@ -43,6 +44,7 @@ export class UserManager {
 
     async createRoom(message: string) {
         const parsedMessage = JSON.parse(message);
+        console.log(parsedMessage)
         const username = parsedMessage.name
         const room = new RoomManager(parsedMessage.roomId, username);
         const avatar = parsedMessage.avatar
