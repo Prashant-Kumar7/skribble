@@ -16,19 +16,18 @@ export function JoinRoomForm({ onClose, avatar }: JoinRoomFormProps) {
   const router = useRouter()
   const [errMsg, setErrMsg] = useState("")
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async(e: React.FormEvent) => {
     e.preventDefault()
     // Handle room joining logic here
     console.log('Joining room:', roomId, 'as:', name)
     localStorage.setItem("username", name);
-    axios.post("http://ec2-3-110-189-79.ap-south-1.compute.amazonaws.com:3000/api/v1/join-room", {name : name, roomId : roomId, avatar : avatar}).then((res)=>{
-      if(res.data.err){
-        setErrMsg(res.data.err)
-      }else{
-        onClose()
-        router.push(`/draw/${res.data.roomId}`)
-      }
-    })
+    const res =await axios.post("http://13.235.86.128/api/v1/join-room", {name : name, roomId : roomId, avatar : avatar})
+    if(res.data.err){
+      setErrMsg(res.data.err)
+    }else{
+      onClose()
+      router.push(`/draw/${res.data.roomId}`)
+    }
   }
 
   return (
