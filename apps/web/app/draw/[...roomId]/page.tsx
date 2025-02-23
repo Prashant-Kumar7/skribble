@@ -378,7 +378,7 @@ export default function (){
                     onMouseUp={stopDrawing}
                     onMouseOut={stopDrawing}
                  />
-                <div className="mb-2 flex sm:w-full sm:h-full justify-center sm:w-full">
+                <div className="mb-2 flex sm:w-full items-center sm:justify-center sm:w-full">
                     <label>Color: </label>
                     <input type="color" value={color} onChange={(e) => setColor(e.target.value)} />
                     <label className="ml-4">Size: </label>
