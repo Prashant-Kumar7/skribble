@@ -36,16 +36,11 @@ const users = new UserManager()
 
 wss.on("connection" , async function connection(ws : WebSocket){
     users.addUser(ws)
-
-    // ws.on("message" , (message)=>{
-    //     const parsedMessage = JSON.parse(message.toString())
-    //     wss.clients.forEach((socket)=>{
-    //         if(socket != ws){
-    //             socket.send(JSON.stringify(parsedMessage))
-    //         }
-    //     })
-    // })
-
+    setInterval(()=>{
+      wss.clients.forEach((socket)=>{
+        socket.send(JSON.stringify({type : "ping"}))
+      })
+    },30000)
 })
 
 
