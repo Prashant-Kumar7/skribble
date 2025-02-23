@@ -20,7 +20,7 @@ export function CreateRoomForm({ onClose, avatar }: CreateRoomFormProps) {
     // Handle room creation logic here
     console.log('Creating room for:', name)
     localStorage.setItem("username", name);
-    const res = await axios.post("http://13.235.86.128/api/v1/create-room", {name : name, avatar : avatar})
+    const res = await axios.post("https://skribble.tumsab.xyz/api/v1/create-room", {name : name, avatar : avatar})
     router.push(`/draw/${res.data.roomId}`)
     onClose()
   }
