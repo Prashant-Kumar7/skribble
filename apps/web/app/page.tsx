@@ -10,6 +10,7 @@ import { ArrowLeft, ArrowRight, Pencil, Users } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useRouter } from "next/navigation"
 
+
 const Spinner = () => <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
 
 export default function Home() {
