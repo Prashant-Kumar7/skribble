@@ -222,8 +222,8 @@ export default function (){
       useEffect(() => {
         const canvas = canvasRef.current;
         if (canvas) {
-          canvas.width = 755; // 60rem * 16 (assuming 1rem = 16px)
-          canvas.height = 540; // 40rem * 16 (assuming 1rem = 16px)
+          // canvas.width = 755; // 60rem * 16 (assuming 1rem = 16px)
+          // canvas.height = 540; // 40rem * 16 (assuming 1rem = 16px)
           const ctx = canvas.getContext("2d");
           if (ctx) {
             ctx.lineCap = "round";
