@@ -18,13 +18,20 @@ export default function Home() {
   const [name, setName] = useState("")
   const [avatarSeed, setAvatarSeed] = useState(1)
   const [avatarUrl, setAvatarUrl] = useState<string>("")
+  const [svg, setSvg] = useState<string>("")
   const [isAvatarLoading, setIsAvatarLoading] = useState(false)
   const router = useRouter()
+
+  useEffect(()=>{
+    console.log(avatarUrl)
+  },[avatarUrl])
 
   const generateAvatar = useCallback(async () => {
     setIsAvatarLoading(true)
     axios.get(`https://api.dicebear.com/7.x/bottts/svg?seed=${avatarSeed + Math.random()}`).then((response)=>{
+      const smallAvatar = response.data.slice(0,4) + ` style="width:3rem;height:3rem;" ` + response.data.slice(5, response.data.length)
       setAvatarUrl(response.data)
+      setSvg(smallAvatar)
     }).catch((error)=>{
       console.error("Failed to fetch avatar:", error)
     }).finally(()=>{
@@ -43,7 +50,7 @@ export default function Home() {
   const handleCreateRoom = async(e: React.FormEvent) => {
     e.preventDefault()
     localStorage.setItem("username", name);
-    const res = await axios.post("https://skribble.tumsab.xyz/api/v1/create-room", {name : name, avatar : avatarUrl})
+    const res = await axios.post("https://skribble.tumsab.xyz/api/v1/create-room", {name : name, avatar : svg})
     router.push(`/draw/${res.data.roomId}`)
     // console.log("Creating room:", { name, avatarUrl })
   }
@@ -51,7 +58,7 @@ export default function Home() {
   const handleJoinRoom = async(e: React.FormEvent) => {
     e.preventDefault()
     localStorage.setItem("username", name);
-    const res =await axios.post("https://skribble.tumsab.xyz/api/v1/join-room", {name : name, roomId : roomId, avatar : avatarUrl})
+    const res =await axios.post("https://skribble.tumsab.xyz/api/v1/join-room", {name : name, roomId : roomId, avatar : svg})
     if(res.data.err){
       console.log(res.data.err)
     }else{
