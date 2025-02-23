@@ -75,9 +75,9 @@ export default function Home() {
           </div>
         </div>
         <Tabs defaultValue="create" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="create">Create Room</TabsTrigger>
-            <TabsTrigger value="join">Join Room</TabsTrigger>
+          <TabsList className="grid text-black w-full mb-6 grid-cols-2">
+            <TabsTrigger className="bg-sky-100 border-y-8 border-x-8 border-sky-100 focus:bg-white" value="create">Create Room</TabsTrigger>
+            <TabsTrigger className="bg-sky-100 border-y-8 border-r-8 border-sky-100 focus:bg-white" value="join">Join Room</TabsTrigger>
           </TabsList>
           <TabsContent value="create">
             <form onSubmit={handleCreateRoom} className="space-y-4">
@@ -87,7 +87,7 @@ export default function Home() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
-                className="w-full"
+                className="w-full text-gray-600 border-gray-300 focus:border-gray-400 focus:border-2"
               />
               <div className="flex flex-col items-center space-y-2">
                 <div className="relative w-32 h-32">
@@ -99,23 +99,23 @@ export default function Home() {
                   <Button
                     type="button"
                     onClick={handlePrevAvatar}
-                    className="absolute left-0 top-1/2 transform -translate-y-1/2"
+                    className="absolute bg-white left-0 hover:bg-gray-200 top-1/2 transform -translate-y-1/2"
                     size="icon"
                     variant="outline"
                   >
-                    <ArrowLeft className="h-4 w-4" />
+                    <ArrowLeft className="h-4 w-4 text-black" />
                   </Button>
                   <Button
                     type="button"
                     onClick={handleNextAvatar}
-                    className="absolute right-0 top-1/2 transform -translate-y-1/2"
+                    className="absolute right-0 bg-white hover:bg-gray-200 top-1/2 transform -translate-y-1/2"
                     size="icon"
                     variant="outline"
                   >
-                    <ArrowRight className="h-4 w-4" />
+                    <ArrowRight className="h-4 w-4 text-black" />
                   </Button>
                 </div>
-                <span className="text-sm text-muted-foreground">Select your avatar</span>
+                <span className="text-sm text-gray-700 text-muted-foreground">Select your avatar</span>
               </div>
               <Button type="submit" className="w-full bg-green-500 hover:bg-green-600">
                 Create Room
@@ -130,7 +130,7 @@ export default function Home() {
                 value={roomId}
                 onChange={(e) => setRoomId(e.target.value)}
                 required
-                className="w-full"
+                className="w-full text-gray-600 border-gray-300 focus:border-gray-400 focus:border-2"
               />
               <Input
                 type="text"
@@ -138,7 +138,7 @@ export default function Home() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
-                className="w-full"
+                className="w-full text-gray-600 border-gray-300 focus:border-gray-400 focus:border-2"
               />
               <div className="flex flex-col items-center space-y-2">
                 <div className="relative w-32 h-32">
@@ -150,23 +150,23 @@ export default function Home() {
                   <Button
                     type="button"
                     onClick={handlePrevAvatar}
-                    className="absolute left-0 top-1/2 transform -translate-y-1/2"
+                    className="absolute bg-white left-0 hover:bg-gray-200 top-1/2 transform -translate-y-1/2"
                     size="icon"
                     variant="outline"
                   >
-                    <ArrowLeft className="h-4 w-4" />
+                    <ArrowLeft className="h-4 w-4 text-black" />
                   </Button>
                   <Button
                     type="button"
                     onClick={handleNextAvatar}
-                    className="absolute right-0 top-1/2 transform -translate-y-1/2"
+                    className="absolute right-0 bg-white top-1/2 hover:bg-gray-200 transform -translate-y-1/2"
                     size="icon"
                     variant="outline"
                   >
-                    <ArrowRight className="h-4 w-4" />
+                    <ArrowRight className="h-4 w-4 text-black" />
                   </Button>
                 </div>
-                <span className="text-sm text-muted-foreground">Select your avatar</span>
+                <span className="text-sm text-gray-700 text-muted-foreground">Select your avatar</span>
               </div>
               <Button type="submit" className="w-full bg-blue-500 hover:bg-blue-600">
                 Join Room
