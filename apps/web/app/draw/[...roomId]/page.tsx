@@ -372,7 +372,7 @@ export default function (){
                 <canvas
                     ref={canvasRef}
                     style={{ backgroundColor: "white"}}
-                    className="border-2 border-gray-500 h-60 w-full sm:w-[50rem] sm:h-[35rem]"
+                    className="border-2 border-gray-500 h-60 w-full sm:w-[47rem] sm:h-[35rem]"
                     onMouseDown={startDrawing}
                     onMouseMove={draw}
                     onMouseUp={stopDrawing}
