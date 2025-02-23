@@ -17,20 +17,19 @@ export default function Home() {
   const [roomId, setRoomId] = useState("")
   const [name, setName] = useState("")
   const [avatarSeed, setAvatarSeed] = useState(1)
-  const [avatarUrl, setAvatarUrl] = useState("")
+  const [avatarUrl, setAvatarUrl] = useState<string>("")
   const [isAvatarLoading, setIsAvatarLoading] = useState(false)
   const router = useRouter()
 
   const generateAvatar = useCallback(async () => {
     setIsAvatarLoading(true)
-    try {
-      const response = await axios.get(`https://api.dicebear.com/7.x/bottts/svg?seed=${avatarSeed + Math.random()}`)
+    axios.get(`https://api.dicebear.com/7.x/bottts/svg?seed=${avatarSeed + Math.random()}`).then((response)=>{
       setAvatarUrl(response.data)
-    } catch (error) {
+    }).catch((error)=>{
       console.error("Failed to fetch avatar:", error)
-    } finally {
+    }).finally(()=>{
       setIsAvatarLoading(false)
-    }
+    })
   }, [avatarSeed])
 
   const handlePrevAvatar = () => {
